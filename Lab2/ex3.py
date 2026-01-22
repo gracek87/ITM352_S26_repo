@@ -6,5 +6,7 @@ inputValue = input("Please enter a floating point number: ")
 floatValue = float(inputValue)
 squaredValue = floatValue ** 2
 
+squaredValue = round(squaredValue, 2)
+
 print("The original number is:", floatValue)
 print(f"The squared value is: {squaredValue}")
