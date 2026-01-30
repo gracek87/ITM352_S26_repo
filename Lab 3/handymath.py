@@ -13,8 +13,16 @@ def sqrt(number):
         return None
     return number ** 0.5
 
-def exponent ( base, exp, precision ):
+def exponent ( base, exp, precision=2 ):
     """Calculate the base raised to the power."""
     result = base ** exp
     roundedResult = round(result, precision)
     return roundedResult
+
+def max(num1, num2):
+    """Return the maximum of two numbers."""
+    return num1 if num1 > num2 else num2
+
+def min(num1, num2):
+    """Return the minimum of two numbers."""
+    return num1 if num1 < num2 else num2
