@@ -26,3 +26,8 @@ def max(num1, num2):
 def min(num1, num2):
     """Return the minimum of two numbers."""
     return num1 if num1 < num2 else num2
+
+def apply_function(x, y, func):
+    """Apply a given function to x and y and return a formatted string."""
+    result = func(x, y)
+    return f"The function {func.__name__} {x},{y} = {result}"
