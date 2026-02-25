@@ -11,3 +11,10 @@ celebsDict = {"celebrities": celebsList, "ages": agesList}
 
 print(celebsDict)
 
+celebsDict = {
+    "celebrities": list(celebs),
+    "ages": list(ages)
+}
+
+print(celebsDict)
+
