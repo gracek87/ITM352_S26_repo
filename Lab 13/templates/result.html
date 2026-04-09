@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Results</title>
+</head>
+<body>
+    <h1>Quiz Complete</h1>
+    <p>You got {{ finalScore }} out of {{ totalQuestions }} correct.</p>
+    <h2><a href="{{ url_for('startQuiz') }}">Try Again</a></h2>
+</body>
+</html>
