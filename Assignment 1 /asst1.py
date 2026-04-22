@@ -1,11 +1,11 @@
-# Build an interactive quiz application that supports asking a user at least five multiple-choice questions.  The quiz should present each question to the user, present at least four options for the answer (a-d), accept an answer from the user. Let them know if their answer is correct or not.  At the end of the quiz, it should report the final score.  The program should not allow a user to enter an invalid response. If the responses are a-d, any other response, such as "q", should be ignored and the user should be re-prompted).  The quiz questions should be kept in a file so that it is easy to add/remove questions or to have sets of questions on different topics.  
-# 1. Write the history of scores out to a file. 
-# 3. Allow for multiple numbers of answers to a question. 
-
+from flask import Flask, redirect, render_template, request, session, url_for
 import random
 from string import ascii_lowercase
 
-# Each question stores (correct answers list, all possible options)
+app = Flask(__name__)
+app.secret_key = "quizSecretKey"
+
+# YOUR ORIGINAL QUESTIONS (UNCHANGED)
 QUESTIONS = {
     "Which sport is Duke Kahanamoku most famous for?": (["Surfing"], ["Surfing", "Basketball", "Baseball", "Football"]),
     "Simone Biles is famous for competing in which sport?": (["Gymnastics"], ["Gymnastics", "Swimming", "Tennis", "Track and Field"]),
@@ -17,87 +17,31 @@ QUESTIONS = {
     )
 }
 
-# File used to store user high scores
-SCORE_FILE = "scores.txt"
+scoreFile = "scores.txt"
 
 
-# Randomizes answer order and labels them by letter (a, b, c, d)
-def makeLabeledAlternatives(options):
-    shuffledOptions = options.copy()
-    random.shuffle(shuffledOptions)
-    labels = ascii_lowercase[:len(shuffledOptions)]
-    labeledAlternatives = dict(zip(labels, shuffledOptions))
-    return labeledAlternatives
-
-
-# Ensures the user enters a valid answer choice
-def getValidChoice(labeledAlternatives, multiAnswer):
-    while True:
-        if multiAnswer:
-            # Allow multiple letters for questions with multiple answers
-            answerLabels = input("Choice(s)? ").lower().replace(" ", "")
-            if all(label in labeledAlternatives for label in answerLabels):
-                return answerLabels
-        else:
-            answerLabel = input("Choice? ").lower()
-            if answerLabel in labeledAlternatives:
-                return answerLabel
-        print("Invalid choice. Please enter valid letter(s).")
-
-
-# Displays a question and checks if the user's answer 
-def askQuestion(questionNum, question, correctAnswers, options):
-    print(f"\nQuestion {questionNum}:")
-    print(question)
-
-    labeledAlternatives = makeLabeledAlternatives(options)
-    for label in ascii_lowercase[:len(labeledAlternatives)]:
-        print(f" {label}. {labeledAlternatives[label]}")
-    multiAnswer = len(correctAnswers) > 1
-    if multiAnswer:
-        print("Select ALL correct answers.")
-
-    answerLabels = getValidChoice(labeledAlternatives, multiAnswer)
-
-    # Handle questions with multiple correct answers
-    if multiAnswer:
-        answers = [labeledAlternatives[label] for label in answerLabels]
-        if set(answers) == set(correctAnswers):
-            print("Correct!")
-            return 1
-        else:
-            print(f"Correct answers were: {', '.join(correctAnswers)}")
-            return 0
-
-    # Handle normal single-answer questions
-    else:
-        answer = labeledAlternatives[answerLabels]
-        if answer in correctAnswers:
-            print("Correct!")
-            return 1
-        else:
-            print(f"The answer is '{correctAnswers[0]}' not '{answer}'")
-            return 0
-
-
-# Runs the quiz and keeps track of total correct answers
-def runQuiz(questions):
-    numCorrect = 0
-    questionList = list(questions.items())
-    random.shuffle(questionList)
-
-    for questionNum, (question, data) in enumerate(questionList, start=1):
+# Convert dict → shuffled list for Flask use
+def getQuestionList():
+    questionList = []
+    for question, data in QUESTIONS.items():
         correctAnswers, options = data
-        numCorrect += askQuestion(questionNum, question, correctAnswers, options)
+        shuffledOptions = options.copy()
+        random.shuffle(shuffledOptions)
 
-    return numCorrect
+        questionList.append({
+            "question": question,
+            "correctAnswers": correctAnswers,
+            "options": shuffledOptions
+        })
+
+    random.shuffle(questionList)
+    return questionList
 
 
-# Loads previous user scores from the file
 def loadScores():
     scores = {}
     try:
-        with open(SCORE_FILE, "r") as file:
+        with open(scoreFile, "r") as file:
             for line in file:
                 name, score = line.strip().split(",")
                 scores[name] = int(score)
@@ -106,41 +50,137 @@ def loadScores():
     return scores
 
 
-# Saves updated scores back to the file
 def saveScores(scores):
-    with open(SCORE_FILE, "w") as file:
+    with open(scoreFile, "w") as file:
         for name, score in scores.items():
             file.write(f"{name},{score}\n")
 
 
-# Prompts the user to login with a username
-def login():
-    username = input("Enter your username: ")
-    return username
-
-
-# Updates the user's personal high score if they beat it
 def updateHighScore(username, score, scores):
     if username not in scores or score > scores[username]:
         scores[username] = score
-        print("New personal high score!")
+        return True
+    return False
 
 
-# Finds and displays the grand champion (highest score overall)
-def showChampion(scores):
+def getChampion(scores):
     if scores:
         champion = max(scores, key=scores.get)
-        print(f"\nGrand Champion: {champion} with {scores[champion]} points!")
+        return champion, scores[champion]
+    return None, None
 
 
-# Main function that runs the entire program
-def main():
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+
+        if username == "":
+            return render_template("index.html", error="Enter a username.")
+
+        session["username"] = username
+        session["questions"] = getQuestionList()
+        session["questionNumber"] = 0
+        session["score"] = 0
+
+        return redirect(url_for("quiz"))
+
+    return render_template("index.html")
+
+
+@app.route("/quiz", methods=["GET", "POST"])
+def quiz():
+    if "questions" not in session:
+        return redirect(url_for("home"))
+
+    questions = session["questions"]
+    questionNumber = session["questionNumber"]
+
+    if questionNumber >= len(questions):
+        return redirect(url_for("result"))
+
+    currentQuestion = questions[questionNumber]
+    options = currentQuestion["options"]
+
+    labeledOptions = dict(zip(ascii_lowercase[:len(options)], options))
+    multiAnswer = len(currentQuestion["correctAnswers"]) > 1
+
+    if request.method == "POST":
+        selectedAnswers = request.form.getlist("answer")
+
+        # VALIDATION (no invalid input allowed)
+        if len(selectedAnswers) == 0:
+            return render_template(
+                "quiz.html",
+                question=currentQuestion["question"],
+                labeledOptions=labeledOptions,
+                questionNumber=questionNumber + 1,
+                totalQuestions=len(questions),
+                multiAnswer=multiAnswer,
+                error="Select at least one answer."
+            )
+
+        if not all(ans in labeledOptions for ans in selectedAnswers):
+            return render_template(
+                "quiz.html",
+                question=currentQuestion["question"],
+                labeledOptions=labeledOptions,
+                questionNumber=questionNumber + 1,
+                totalQuestions=len(questions),
+                multiAnswer=multiAnswer,
+                error="Invalid choice."
+            )
+
+        chosenOptions = [labeledOptions[a] for a in selectedAnswers]
+        correctAnswers = currentQuestion["correctAnswers"]
+
+        if set(chosenOptions) == set(correctAnswers):
+            session["score"] += 1
+
+        session["questionNumber"] += 1
+        return redirect(url_for("quiz"))
+
+    return render_template(
+        "quiz.html",
+        question=currentQuestion["question"],
+        labeledOptions=labeledOptions,
+        questionNumber=questionNumber + 1,
+        totalQuestions=len(questions),
+        multiAnswer=multiAnswer
+    )
+
+
+@app.route("/result")
+def result():
+    if "username" not in session:
+        return redirect(url_for("home"))
+
+    username = session["username"]
+    score = session["score"]
+    totalQuestions = len(session["questions"])
+
     scores = loadScores()
-    username = login()
-    numCorrect = runQuiz(QUESTIONS)
-    print(f"\n{username}, you got {numCorrect} out of {len(QUESTIONS)} correct.")
-    updateHighScore(username, numCorrect, scores)
+    newHighScore = updateHighScore(username, score, scores)
     saveScores(scores)
-    showChampion(scores)
 
-main()
+    champion, championScore = getChampion(scores)
+
+    session.clear()
+
+    return render_template(
+        "result.html",
+        username=username,
+        score=score,
+        totalQuestions=totalQuestions,
+        newHighScore=newHighScore,
+        champion=champion,
+        championScore=championScore
+    )
+
+
+def main():
+    app.run(debug=True)
+
+
+if __name__ == "__main__":
+    main()

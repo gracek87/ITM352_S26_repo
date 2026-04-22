@@ -1,10 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Welcome to the Quiz</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Home</title>
 </head>
 <body>
-    <h1>Welcome to the Quiz!</h1>
-    <a href="{{ url_for('quiz') }}">Start Quiz</a>
+    <h1>Welcome to Grace's Quiz Game</h1>
+
+    {% if username %}
+        <h2>Welcome back, {{ username }}!</h2>
+
+        {% if history and history|length > 0 %}
+            <h3>Your Score History</h3>
+            <ul>
+                {% for score in history %}
+                    <li>{{ score }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No previous scores yet.</p>
+        {% endif %}
+
+        <h2><a href="{{ url_for('quiz') }}">Start Quiz</a></h2>
+    {% else %}
+        <h2>Please enter your name to begin</h2>
+
+        {% if error %}
+            <p style="color:red;">{{ error }}</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('home') }}">
+            <label for="username">Name:</label>
+            <input type="text" id="username" name="username" required>
+            <br><br>
+            <input type="submit" value="Continue">
+        </form>
+    {% endif %}
 </body>
 </html>

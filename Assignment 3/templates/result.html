@@ -1,11 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .box {
+            max-width: 700px;
+            margin: auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Your Quiz Result</h1>
-    <p>Your score: {{ score }} out of 5</p>
-    <a href="{{ url_for('home') }}">Take Quiz Again</a>
+    <div class="box">
+        <h1>Quiz Complete</h1>
+
+        <p>{{ username }}, you got {{ score }} out of {{ totalQuestions }} correct.</p>
+
+        <h3>Your Score History</h3>
+        <ul>
+            {% for item in history %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+
+        <p><a href="{{ url_for('setup') }}">Play Again</a></p>
+        <p><a href="{{ url_for('home') }}">Back to Home</a></p>
+    </div>
 </body>
 </html>

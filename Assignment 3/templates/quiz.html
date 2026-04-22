@@ -1,15 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Quiz</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Question</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .box {
+            max-width: 750px;
+            margin: auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        .timer {
+            color: #b30000;
+            font-weight: bold;
+        }
+
+        .optionRow {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 8px 14px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-    <h1>Question 1: {{ question }}</h1>
-    <form method="POST">
-        {% for option in options %}
-            <input type="radio" name="answer" value="{{ option }}"> {{ option }}<br>
-        {% endfor %}
-        <button type="submit">Submit Answer</button>
-    </form>
+    <div class="box">
+        <h1>{{ category }} Quiz</h1>
+        <p>Question {{ questionNumber }} of {{ totalQuestions }}</p>
+        <p class="timer">Time Left: <span id="timer">{{ timeLimit }}</span> seconds</p>
+
+        <h3>{{ question.question }}</h3>
+
+        {% if multiAnswer %}
+            <p><strong>Select all correct answers.</strong></p>
+        {% endif %}
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('quiz') }}" id="quizForm">
+            {% for option in question.shuffledOptions %}
+                <div class="optionRow">
+                    {% if multiAnswer %}
+                        <input type="checkbox" name="answer" value="{{ option }}" id="option{{ loop.index }}">
+                    {% else %}
+                        <input type="radio" name="answer" value="{{ option }}" id="option{{ loop.index }}">
+                    {% endif %}
+                    <label for="option{{ loop.index }}">{{ option }}</label>
+                </div>
+            {% endfor %}
+
+            <button type="submit">Submit Answer</button>
+        </form>
+    </div>
+
+    <script>
+        const timerElement = document.getElementById("timer");
+        const quizForm = document.getElementById("quizForm");
+        let timeLeft = parseInt(timerElement.textContent, 10);
+
+        const countdown = setInterval(function () {
+            timeLeft -= 1;
+            timerElement.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                quizForm.submit();
+            }
+        }, 1000);
+    </script>
 </body>
 </html>
